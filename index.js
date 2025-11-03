@@ -63,7 +63,7 @@ client.on('messageCreate', async (message) => {
       const visits = normal.Totals?.Visits || 0;
       const clicks = normal.Totals?.Clicks || 0;
 
-      // Recordurile maxime pentru BIGGEST HITS
+      // Recordurile maxime pentru BIGGEST HIT
       const biggestSummary = normal.Highest?.Summary || 0;
       const biggestRap = normal.Highest?.Rap || 0;
       const biggestRobux = normal.Highest?.Balance || 0;
@@ -88,7 +88,7 @@ Visits:   ${formatNumber(visits)}
 Clicks:   ${formatNumber(clicks)}
 \`\`\`
 
-<:dot:1434739765240135811> **BIGGEST HITS:**
+<:dot:1434739765240135811> **BIGGEST HIT:**
 \`\`\`
 Summary:  ${formatNumber(biggestSummary)}
 RAP:      ${formatNumber(biggestRap)}
@@ -156,6 +156,13 @@ Robux:    ${formatNumber(totalRobux)}
 Hits:     ${formatNumber(dailyHits)}
 Visits:   ${formatNumber(dailyVisits)}
 Clicks:   ${formatNumber(dailyClicks)}
+\`\`\`
+
+<:dot:1434739765240135811> **BIGGEST HIT:**
+\`\`\`
+Summary:  ${formatNumber(biggestSummary)}
+RAP:      ${formatNumber(biggestRap)}
+Robux:    ${formatNumber(biggestRobux)}
 \`\`\`
 
 <:dot:1434739765240135811> **DAILY HIT STATS:**
