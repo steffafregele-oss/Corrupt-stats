@@ -63,6 +63,7 @@ client.on('messageCreate', async (message) => {
       const visits = normal.Totals?.Visits || 0;
       const clicks = normal.Totals?.Clicks || 0;
 
+      // Recordurile maxime pentru BIGGEST HITS
       const biggestSummary = normal.Highest?.Summary || 0;
       const biggestRap = normal.Highest?.Rap || 0;
       const biggestRobux = normal.Highest?.Balance || 0;
