@@ -78,8 +78,7 @@ client.on('messageCreate', async (message) => {
         .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
         .setDescription(`─── <a:shine:1434729237545222287> **NORMAL INFO** <a:shine:1434729237545222287> ───
 
-<:dot:1434739765240135811> **Command by:** ${message.author.username}
-<:dot:1434739765240135811> **Target:** ${userName}
+<:dot:1434739765240135811> **User:** **${userName}**
 
 <:dot:1434739765240135811> **TOTAL STATS:**
 \`\`\`
@@ -149,8 +148,7 @@ Robux:    ${formatNumber(totalRobux)}
         .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
         .setDescription(`─── <a:shine:1434729237545222287> **DAILY STATS** <a:shine:1434729237545222287> ───
 
-<:dot:1434739765240135811> **Command by:** ${message.author.username}
-<:dot:1434739765240135811> **Target:** ${userName}
+<:dot:1434739765240135811> **User:** **${userName}**
 
 <:dot:1434739765240135811> **DAILY STATS:**
 \`\`\`
