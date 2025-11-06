@@ -38,6 +38,8 @@ function formatNumber(num) {
 // 5.1️⃣ Uptime Monitor Config
 const SITE_URL = "https://www.logged.tg/auth/corrupt";
 let lastUpTime = null;
+let lastStatus = null; // "UP" sau "DOWN"
+const STATUS_CHANNEL_ID = "1436098432413597726";
 
 function formatDuration(ms) {
   let sec = Math.floor(ms / 1000);
@@ -48,14 +50,42 @@ function formatDuration(ms) {
   return `${hr}h ${min}m ${sec}s`;
 }
 
-// verificare website la fiecare 30 sec
+// Auto-check site la fiecare 30 sec
 setInterval(async () => {
   try {
+    const start = Date.now();
     const res = await fetch(SITE_URL);
+    const ping = Date.now() - start;
+
+    let currentStatus = res.ok ? "UP" : "DOWN";
+
     if (res.ok && !lastUpTime) lastUpTime = Date.now();
     if (!res.ok) lastUpTime = null;
-  } catch {
-    lastUpTime = null;
+
+    // Trimite mesaj doar dacă status s-a schimbat
+    if (currentStatus !== lastStatus) {
+      const channel = client.channels.cache.get(STATUS_CHANNEL_ID);
+      if (channel) {
+        const embed = new EmbedBuilder()
+          .setColor(0x000000)
+          .setThumbnail(client.user.displayAvatarURL({ dynamic: true, size: 128 }))
+          .setDescription(`─── <a:shine:1434729237545222287> SITE STATUS <a:shine:1434729237545222287> ───
+
+<a:corrupt_arrow:1434730936880332840> **MAIN SITE:** \`${SITE_URL}\`
+<a:corrupt_arrow:1434730936880332840> ${currentStatus === "UP" ? "Main site is up, go use it" : "Main site is down, use the backup sites for now"}
+
+Response Time: ${res.ok ? ping + "ms" : "N/A"}
+`)
+          .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
+          .setFooter({ text: "Site Uptime Monitor" });
+
+        channel.send({ embeds: [embed] });
+      }
+      lastStatus = currentStatus;
+    }
+
+  } catch (err) {
+    console.error("Error checking site:", err);
   }
 }, 30000);
 
@@ -80,7 +110,6 @@ client.on('messageCreate', async (message) => {
       const normal = data.Normal;
       const profile = data.Profile || {};
 
-      // Folosim Accounts pentru Hits
       const hits = normal.Totals?.Accounts || 0;
       const visits = normal.Totals?.Visits || 0;
       const clicks = normal.Totals?.Clicks || 0;
@@ -152,7 +181,6 @@ Robux:    ${formatNumber(totalRobux)}
         return;
       }
 
-      // Folosim Accounts pentru Hits
       const dailyHits = daily.Totals?.Accounts || 0;
       const dailyVisits = daily.Totals?.Visits || 0;
       const dailyClicks = daily.Totals?.Clicks || 0;
@@ -205,7 +233,7 @@ Robux:    ${formatNumber(dailyRobux)}
     }
   }
 
-  // ===== ✅ !check =====
+  // ===== ✅ !check (manual) cu corrupt_crown emoji =====
   if (message.content.startsWith('!check')) {
     try {
       const start = Date.now();
@@ -218,11 +246,11 @@ Robux:    ${formatNumber(dailyRobux)}
       if (res.ok) {
         if (!lastUpTime) lastUpTime = Date.now();
         uptimeText = `UP for **${formatDuration(Date.now() - lastUpTime)}**`;
-        statusText = "✅ **ONLINE**";
+        statusText = "<a:corrupt_crown:1434729237545222287> **ONLINE**";
       } else {
         lastUpTime = null;
         uptimeText = "❌ No uptime data (offline)";
-        statusText = `⚠️ HTTP ERROR: ${res.status}`;
+        statusText = `<a:corrupt_crown:1434729237545222287> OFFLINE`;
       }
 
       const embed = new EmbedBuilder()
@@ -230,11 +258,9 @@ Robux:    ${formatNumber(dailyRobux)}
         .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 128 }))
         .setDescription(`─── <a:shine:1434729237545222287> **SITE STATUS** <a:shine:1434729237545222287> ───
 
-<:dot:1434739765240135811> **MAIN SITE:**
-\`${SITE_URL}\`
-
-<:dot:1434739765240135811> **STATUS:** ${statusText}
-<:dot:1434739765240135811> **UPTIME:** ${uptimeText}
+<a:corrupt_crown:1434729237545222287> **MAIN SITE:** \`${SITE_URL}\`
+<a:corrupt_crown:1434729237545222287> **STATUS:** ${statusText}
+<a:corrupt_crown:1434729237545222287> **UPTIME:** ${uptimeText}
 
 \`\`\`
 Response Time: ${ping}ms
@@ -252,11 +278,9 @@ Response Time: ${ping}ms
         .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 128 }))
         .setDescription(`─── <a:shine:1434729237545222287> **SITE STATUS** <a:shine:1434729237545222287> ───
 
-<:dot:1434739765240135811> **MAIN SITE:**
-\`${SITE_URL}\`
-
-<:dot:1434739765240135811> **STATUS:** ❌ **OFFLINE**
-<:dot:1434739765240135811> **UPTIME:** No uptime data
+<a:corrupt_crown:1434729237545222287> **MAIN SITE:** \`${SITE_URL}\`
+<a:corrupt_crown:1434729237545222287> **STATUS:** OFFLINE
+<a:corrupt_crown:1434729237545222287> **UPTIME:** No uptime data
 `)
         .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
         .setFooter({ text: "Site Uptime Monitor" });
