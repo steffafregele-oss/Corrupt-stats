@@ -35,6 +35,30 @@ function formatNumber(num) {
   }
 }
 
+// 5.1️⃣ Uptime Monitor Config
+const SITE_URL = "https://www.logged.tg/auth/corrupt";
+let lastUpTime = null;
+
+function formatDuration(ms) {
+  let sec = Math.floor(ms / 1000);
+  let min = Math.floor(sec / 60);
+  let hr = Math.floor(min / 60);
+  sec %= 60;
+  min %= 60;
+  return `${hr}h ${min}m ${sec}s`;
+}
+
+// verificare website la fiecare 30 sec
+setInterval(async () => {
+  try {
+    const res = await fetch(SITE_URL);
+    if (res.ok && !lastUpTime) lastUpTime = Date.now();
+    if (!res.ok) lastUpTime = null;
+  } catch {
+    lastUpTime = null;
+  }
+}, 30000);
+
 // 6️⃣ Event listener pentru mesaje
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
@@ -180,6 +204,67 @@ Robux:    ${formatNumber(dailyRobux)}
       message.reply("❌ Error fetching daily stats. Please try again later.");
     }
   }
+
+  // ===== ✅ !check =====
+  if (message.content.startsWith('!check')) {
+    try {
+      const start = Date.now();
+      const res = await fetch(SITE_URL);
+      const ping = Date.now() - start;
+
+      let statusText = "";
+      let uptimeText = "";
+
+      if (res.ok) {
+        if (!lastUpTime) lastUpTime = Date.now();
+        uptimeText = `UP for **${formatDuration(Date.now() - lastUpTime)}**`;
+        statusText = "✅ **ONLINE**";
+      } else {
+        lastUpTime = null;
+        uptimeText = "❌ No uptime data (offline)";
+        statusText = `⚠️ HTTP ERROR: ${res.status}`;
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor(0x000000)
+        .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(`─── <a:shine:1434729237545222287> **SITE STATUS** <a:shine:1434729237545222287> ───
+
+<:dot:1434739765240135811> **MAIN SITE:**
+\`${SITE_URL}\`
+
+<:dot:1434739765240135811> **STATUS:** ${statusText}
+<:dot:1434739765240135811> **UPTIME:** ${uptimeText}
+
+\`\`\`
+Response Time: ${ping}ms
+\`\`\``)
+        .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
+        .setFooter({ text: "Site Uptime Monitor" });
+
+      await message.channel.send({ embeds: [embed] });
+
+    } catch {
+      lastUpTime = null;
+
+      const embed = new EmbedBuilder()
+        .setColor(0x000000)
+        .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(`─── <a:shine:1434729237545222287> **SITE STATUS** <a:shine:1434729237545222287> ───
+
+<:dot:1434739765240135811> **MAIN SITE:**
+\`${SITE_URL}\`
+
+<:dot:1434739765240135811> **STATUS:** ❌ **OFFLINE**
+<:dot:1434739765240135811> **UPTIME:** No uptime data
+`)
+        .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
+        .setFooter({ text: "Site Uptime Monitor" });
+
+      await message.channel.send({ embeds: [embed] });
+    }
+  }
+
 });
 
 // 7️⃣ Error handler
