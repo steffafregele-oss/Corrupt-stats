@@ -26,7 +26,7 @@ client.once('ready', () => {
   console.log(`📊 Serving ${client.guilds.cache.size} servers`);
 });
 
-// 5️⃣ Funcție utilă
+// 5️⃣ Funcții utile
 function formatNumber(num) {
   try { 
     return num.toLocaleString(); 
@@ -48,13 +48,13 @@ function formatDuration(ms) {
 let lastUpTime = null;
 let lastStatus = null; // "UP" sau "DOWN"
 const STATUS_CHANNEL_ID = "1436098432413597726";
+const MAIN_SITE_NAME = "MAIN SITE";
 
-// Auto-check site la fiecare 30 sec
+// Auto-check site la fiecare 30 sec (dummy fetch)
 setInterval(async () => {
   try {
     const start = Date.now();
-    // simulăm request ca să putem marca UP/DOWN fără link
-    const res = { ok: true }; // dacă vrei poți schimba la false pentru test DOWN
+    const res = { ok: true }; // simulare request
     const ping = 100; // dummy ping
 
     let currentStatus = res.ok ? "UP" : "DOWN";
@@ -67,11 +67,11 @@ setInterval(async () => {
       if (channel) {
         const embed = new EmbedBuilder()
           .setColor(0x000000)
-          .setThumbnail(client.user.displayAvatarURL({ dynamic: true, size: 128 }))
+          .setThumbnail("https://cdn.discordapp.com/emojis/1431059075826712656.png")
           .setDescription(`@everyone
 <a:corrupt_crown:1434729237545222287> SITE STATUS
 
-<a:corrupt_arrow:1434730936880332840> **MAIN SITE**
+<a:corrupt_arrow:1434730936880332840> **${MAIN_SITE_NAME}**
 <a:corrupt_arrow:1434730936880332840> ${currentStatus === "UP" ? "Main site is up, go use it" : "Main site is down, use the backup sites for now"}
 
 Response Time: ${res.ok ? ping + "ms" : "N/A"}
