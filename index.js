@@ -48,14 +48,23 @@ function formatDuration(ms) {
 let lastUpTime = null;
 let lastStatus = null; // "UP" sau "DOWN"
 const STATUS_CHANNEL_ID = "1436098432413597726";
+const MAIN_SITE_URL = "https://www.logged.tg/auth/corrupt";
 const MAIN_SITE_NAME = "MAIN SITE";
 
-// Auto-check site la fiecare 30 sec (dummy fetch)
+// Auto-check site la fiecare 30 sec
 setInterval(async () => {
   try {
     const start = Date.now();
-    const res = { ok: true }; // simulare request
-    const ping = 100; // dummy ping
+    let res, ping;
+
+    try {
+      const response = await fetch(MAIN_SITE_URL);
+      res = { ok: response.ok };
+      ping = Date.now() - start;
+    } catch {
+      res = { ok: false };
+      ping = null;
+    }
 
     let currentStatus = res.ok ? "UP" : "DOWN";
 
@@ -74,7 +83,7 @@ setInterval(async () => {
 <a:corrupt_arrow:1434730936880332840> **${MAIN_SITE_NAME}**
 <a:corrupt_arrow:1434730936880332840> ${currentStatus === "UP" ? "Main site is up, go use it" : "Main site is down, use the backup sites for now"}
 
-Response Time: ${res.ok ? ping + "ms" : "N/A"}
+Response Time: ${ping ? ping + "ms" : "N/A"}
 `)
           .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
           .setFooter({ text: "Site Uptime Monitor" });
@@ -237,8 +246,16 @@ Robux:    ${formatNumber(dailyRobux)}
   if (message.content.startsWith('!check')) {
     try {
       const start = Date.now();
-      const res = { ok: true }; // dummy response
-      const ping = 100;
+      let res, ping;
+
+      try {
+        const response = await fetch(MAIN_SITE_URL);
+        res = { ok: response.ok };
+        ping = Date.now() - start;
+      } catch {
+        res = { ok: false };
+        ping = null;
+      }
 
       let statusText = "";
       let uptimeText = "";
@@ -258,12 +275,12 @@ Robux:    ${formatNumber(dailyRobux)}
         .setThumbnail("https://cdn.discordapp.com/emojis/1431059075826712656.png")
         .setDescription(`<a:corrupt_crown:1434729237545222287> SITE STATUS
 
-<a:corrupt_arrow:1434730936880332840> **MAIN SITE**
+<a:corrupt_arrow:1434730936880332840> **${MAIN_SITE_NAME}**
 <a:corrupt_arrow:1434730936880332840> **STATUS:** ${statusText}
 <a:corrupt_arrow:1434730936880332840> **UPTIME:** ${uptimeText}
 
 \`\`\`
-Response Time: ${ping}ms
+Response Time: ${ping ? ping + "ms" : "N/A"}
 \`\`\``)
         .setImage("https://i.pinimg.com/originals/67/b1/ef/67b1ef05eb08b416b90323b73e6cf1c5.gif")
         .setFooter({ text: "Site Uptime Monitor" });
@@ -278,7 +295,7 @@ Response Time: ${ping}ms
         .setThumbnail("https://cdn.discordapp.com/emojis/1431059075826712656.png")
         .setDescription(`<a:corrupt_crown:1434729237545222287> SITE STATUS
 
-<a:corrupt_arrow:1434730936880332840> **MAIN SITE**
+<a:corrupt_arrow:1434730936880332840> **${MAIN_SITE_NAME}**
 <a:corrupt_arrow:1434730936880332840> **STATUS:** OFFLINE
 <a:corrupt_arrow:1434730936880332840> **UPTIME:** No uptime data
 `)
