@@ -50,7 +50,7 @@ function formatDuration(ms) {
   return `${hr}h ${min}m ${sec}s`;
 }
 
-// Auto-check site la fiecare 30 sec
+// Auto-check site la fiecare 30 sec (mesaje automate)
 setInterval(async () => {
   try {
     const start = Date.now();
@@ -69,7 +69,8 @@ setInterval(async () => {
         const embed = new EmbedBuilder()
           .setColor(0x000000)
           .setThumbnail(client.user.displayAvatarURL({ dynamic: true, size: 128 }))
-          .setDescription(`─── <a:shine:1434729237545222287> SITE STATUS <a:shine:1434729237545222287> ───
+          .setDescription(`@everyone
+─── <a:shine:1434729237545222287> SITE STATUS <a:shine:1434729237545222287> ───
 
 <a:corrupt_arrow:1434730936880332840> **MAIN SITE:** \`${SITE_URL}\`
 <a:corrupt_arrow:1434730936880332840> ${currentStatus === "UP" ? "Main site is up, go use it" : "Main site is down, use the backup sites for now"}
@@ -233,7 +234,7 @@ Robux:    ${formatNumber(dailyRobux)}
     }
   }
 
-  // ===== ✅ !check (manual) cu corrupt_crown emoji =====
+  // ===== ✅ !check (manual) cu corrupt_crown emoji, thumbnail fixat, fara @everyone =====
   if (message.content.startsWith('!check')) {
     try {
       const start = Date.now();
@@ -255,7 +256,7 @@ Robux:    ${formatNumber(dailyRobux)}
 
       const embed = new EmbedBuilder()
         .setColor(0x000000)
-        .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setThumbnail("https://cdn.discordapp.com/emojis/1431059075826712656.png")
         .setDescription(`─── <a:shine:1434729237545222287> **SITE STATUS** <a:shine:1434729237545222287> ───
 
 <a:corrupt_crown:1434729237545222287> **MAIN SITE:** \`${SITE_URL}\`
@@ -275,7 +276,7 @@ Response Time: ${ping}ms
 
       const embed = new EmbedBuilder()
         .setColor(0x000000)
-        .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setThumbnail("https://cdn.discordapp.com/emojis/1431059075826712656.png")
         .setDescription(`─── <a:shine:1434729237545222287> **SITE STATUS** <a:shine:1434729237545222287> ───
 
 <a:corrupt_crown:1434729237545222287> **MAIN SITE:** \`${SITE_URL}\`
