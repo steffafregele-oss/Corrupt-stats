@@ -141,12 +141,18 @@ client.on('messageCreate', async (message) => {
   // ===== !daily =====
   if (message.content.startsWith('!daily')) {
     try {
-      const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
+      const DAILY_API = `https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`;
+      const res = await fetch(DAILY_API);
       const data = await res.json();
-      const daily = data.Daily || data.Normal;
-      const embed = await sendStatsEmbed("DAILY STATS", daily, "Stats Bot Daily", targetUser);
+
+      if (!data || !data.Normal) { message.reply("❌ No daily stats found."); return; }
+
+      const embed = await sendStatsEmbed("DAILY STATS", data.Normal, "Stats Bot Daily", targetUser);
       await message.channel.send({ embeds: [embed] });
-    } catch { message.reply("❌ Error fetching daily stats."); }
+    } catch (err) {
+      console.error(err);
+      message.reply("❌ Error fetching daily stats.");
+    }
   }
 
   // ===== !check =====
@@ -162,7 +168,7 @@ client.on('messageCreate', async (message) => {
 
       const embed = createStatusEmbed(res.ok ? "UP" : "DOWN", ping);
       await message.channel.send({ embeds: [embed] });
-    } catch (err) { message.reply("❌ Error fetching site status."); }
+    } catch { message.reply("❌ Error fetching site status."); }
   }
 });
 
