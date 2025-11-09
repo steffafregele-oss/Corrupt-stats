@@ -20,13 +20,7 @@ const client = new Client({
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 
-// 4️⃣ Eveniment ready
-client.once('ready', () => {
-  console.log(`✅ Bot ready as ${client.user.tag}`);
-});
-
-// 5️⃣ Funcții utile
-function formatNumber(num) { return num?.toLocaleString() || "0"; }
+// 4️⃣ Funcții utile
 function formatDuration(ms) {
   let sec = Math.floor(ms / 1000);
   let min = Math.floor(sec / 60);
@@ -35,42 +29,56 @@ function formatDuration(ms) {
   return `${hr}h ${min}m ${sec}s`;
 }
 
-// 5.1️⃣ Uptime Monitor Config
+function formatNumber(num) { return num?.toLocaleString() || "0"; }
+
+// 5️⃣ Config site & canal
 let lastUpTime = null;
-let lastStatus = null; 
-const STATUS_CHANNEL_ID = "1436098432413597726";
+let lastStatus = null;
+const STATUS_CHANNEL_ID = "1436098432413597726"; // Canal pentru announces
 const MAIN_SITE_URL = "https://www.logged.tg/auth/corrupt";
 const MAIN_SITE_NAME = "MAIN SITE";
 
-// Auto-check site la fiecare 30 sec
+// 6️⃣ Funcție embed pentru check/announces
+function createStatusEmbed(status, ping) {
+  const statusEmoji = status === "UP" ? "<a:corrupt_verify:1437152885480886312>" : "❌";
+  const uptimeText = status === "UP" && lastUpTime ? formatDuration(Date.now() - lastUpTime) : "❌ No uptime data";
+
+  return new EmbedBuilder()
+    .setColor(0x1ABC9C)
+    .setTitle(`— <a:emoji_22:1437165310775132160> SITE STATUS —`)
+    .setThumbnail("<a:corrupt_crown:1437152941088702607>")
+    .setDescription(
+`<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**
+<a:emoji_21:1437163698161717468> Status: ${status === "UP" ? "ONLINE" : "OFFLINE"} ${statusEmoji}
+<a:emoji_21:1437163698161717468> Uptime: ${uptimeText}
+<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
+    )
+    .setImage("https://i.imgur.com/dg8a7VB.gif") // Banner sus
+    .setFooter({ text: "Site Uptime Monitor" });
+}
+
+// 7️⃣ Interval pentru anunțuri automate
 setInterval(async () => {
   try {
     const start = Date.now();
     let res, ping;
-    try { const response = await fetch(MAIN_SITE_URL); res = { ok: response.ok }; ping = Date.now() - start; } 
-    catch { res = { ok: false }; ping = null; }
+    try {
+      const response = await fetch(MAIN_SITE_URL);
+      res = { ok: response.ok };
+      ping = Date.now() - start;
+    } catch {
+      res = { ok: false };
+      ping = null;
+    }
 
-    let currentStatus = res.ok ? "UP" : "DOWN";
+    const currentStatus = res.ok ? "UP" : "DOWN";
     if (res.ok && !lastUpTime) lastUpTime = Date.now();
     if (!res.ok) lastUpTime = null;
 
     if (currentStatus !== lastStatus) {
       const channel = client.channels.cache.get(STATUS_CHANNEL_ID);
       if (channel) {
-        const statusEmoji = res.ok ? "<a:corrupt_verify:1437152885480886312>" : "❌";
-        const embed = new EmbedBuilder()
-          .setColor(0x1ABC9C)
-          .setTitle(`— <a:emoji_22:1437165310775132160> SITE STATUS —`)
-          .setThumbnail("<a:corrupt_crown:1437152941088702607>") // coroana dreapta sus
-          .setDescription(
-`<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**
-<a:emoji_21:1437163698161717468> Status: ${currentStatus} ${statusEmoji}
-<a:emoji_21:1437163698161717468> Uptime: ${res.ok && lastUpTime ? formatDuration(Date.now() - lastUpTime) : "❌ No uptime data"}
-<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
-          )
-          .setImage("https://i.imgur.com/8ybiT0H.gif") // banner jos
-          .setFooter({ text: "Site Uptime Monitor" });
-
+        const embed = createStatusEmbed(currentStatus, ping);
         await channel.send({ embeds: [embed] });
       }
       lastStatus = currentStatus;
@@ -78,12 +86,12 @@ setInterval(async () => {
   } catch (err) { console.error(err); }
 }, 30000);
 
-// 6️⃣ Funcție generica pentru embed-uri stats
+// 8️⃣ Funcție embed pentru stats/daily
 async function sendStatsEmbed(titleText, statsData, footerText, targetUser) {
   const embed = new EmbedBuilder()
     .setColor(0x1ABC9C)
     .setTitle(`— <a:emoji_22:1437165310775132160> ${titleText} —`)
-    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 })) // poza utilizatorului
+    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
     .setDescription(
 `<a:emoji_21:1437163698161717468> **User:** ${targetUser.username}
 
@@ -108,13 +116,12 @@ RAP:      ${formatNumber(statsData.Totals?.Rap)}
 Robux:    ${formatNumber(statsData.Totals?.Balance)}
 \`\`\``
     )
-    .setImage("https://i.imgur.com/rCQ33gA.gif") // banner jos nou pentru stats/daily
+    .setImage("https://i.imgur.com/rCQ33gA.gif")
     .setFooter({ text: footerText });
-
   return embed;
 }
 
-// 6.1️⃣ Event listener pentru mesaje
+// 9️⃣ Event listener pentru mesaje
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   const targetUser = message.mentions.users.first() || message.author;
@@ -142,40 +149,26 @@ client.on('messageCreate', async (message) => {
     } catch { message.reply("❌ Error fetching daily stats."); }
   }
 
-  // ===== !check & announces =====
-  if (message.content.startsWith('!check') || message.content.startsWith('!announces')) {
+  // ===== !check =====
+  if (message.content.startsWith('!check')) {
     try {
       const start = Date.now();
       let res, ping;
       try { const response = await fetch(MAIN_SITE_URL); res = { ok: response.ok }; ping = Date.now() - start; } 
       catch { res = { ok: false }; ping = null; }
 
-      const statusEmoji = res.ok ? "<a:corrupt_verify:1437152885480886312>" : "❌";
-      const uptimeText = res.ok && lastUpTime ? formatDuration(Date.now() - lastUpTime) : "❌ No uptime data";
+      if (res.ok && !lastUpTime) lastUpTime = Date.now();
+      if (!res.ok) lastUpTime = null;
 
-      const embed = new EmbedBuilder()
-        .setColor(0x1ABC9C)
-        .setTitle(`— <a:emoji_22:1437165310775132160> SITE STATUS —`)
-        .setThumbnail("<a:corrupt_crown:1437152941088702607>") // coroana dreapta sus
-        .setDescription(
-`<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**
-<a:emoji_21:1437163698161717468> Status: ${res.ok ? "ONLINE" : "OFFLINE"} ${statusEmoji}
-<a:emoji_21:1437163698161717468> Uptime: ${uptimeText}
-<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
-        )
-        .setImage("https://i.imgur.com/8ybiT0H.gif") // banner jos pentru check/announces
-        .setFooter({ text: "Site Uptime Monitor" });
-
+      const embed = createStatusEmbed(res.ok ? "UP" : "DOWN", ping);
       await message.channel.send({ embeds: [embed] });
-    } catch (err) { console.error(err); }
+    } catch (err) { message.reply("❌ Error fetching site status."); }
   }
 });
 
-// 7️⃣ Error handler
-client.on('error', (error) => console.error('Discord client error:', error));
+// 10️⃣ Error handler
+client.on('error', console.error);
 
-// 8️⃣ Verificare token
+// 11️⃣ Login bot
 if (!TOKEN) { console.error('❌ DISCORD_BOT_TOKEN is not set!'); process.exit(1); }
-
-// 9️⃣ Login bot
 client.login(TOKEN);
