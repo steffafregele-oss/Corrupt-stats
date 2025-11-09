@@ -1,15 +1,18 @@
 // 1️⃣ Importuri
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { 
+  Client, 
+  GatewayIntentBits, 
+  EmbedBuilder, 
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
+  ChannelType, 
+  PermissionsBitField 
+} = require('discord.js');
 const fetch = require('node-fetch');
-const express = require('express');
+const keepAlive = require('./keep_alive'); 
+keepAlive(); 
 
-// 2️⃣ Server Express pentru keep-alive
-const app = express();
-const PORT = process.env.PORT || 3000;
-app.get("/", (req, res) => res.send("Bot is alive ✅"));
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-// 3️⃣ Creezi clientul Discord
 const client = new Client({ 
   intents: [
     GatewayIntentBits.Guilds, 
@@ -18,9 +21,22 @@ const client = new Client({
   ] 
 });
 
+// 2️⃣ Token și rol admin
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
+const ADMIN_ROLE_ID = '1433970414706622504';
 
-// 4️⃣ Funcții utile
+// 3️⃣ Ticket counter
+let ticketCount = 1;
+let lastUpTime = null;
+let lastStatus = null; // pentru !check
+
+// 4️⃣ Ready
+client.once('ready', () => {
+  console.log(`✅ Bot online ca ${client.user.tag}`);
+});
+
+// 5️⃣ Funcții utile
+function formatNumber(num) { return num?.toLocaleString() || "0"; }
 function formatDuration(ms) {
   let sec = Math.floor(ms / 1000);
   let min = Math.floor(sec / 60);
@@ -29,99 +45,97 @@ function formatDuration(ms) {
   return `${hr}h ${min}m ${sec}s`;
 }
 
-function formatNumber(num) { return num?.toLocaleString() || "0"; }
+// 6️⃣ Ticket panel
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
 
-// 5️⃣ Config site & canal
-let lastUpTime = null;
-let lastStatus = null;
-const STATUS_CHANNEL_ID = "1436098432413597726"; // Canal pentru announces
-const MAIN_SITE_URL = "https://www.logged.tg/auth/corrupt";
-const MAIN_SITE_NAME = "MAIN SITE";
+  if (message.content.toLowerCase() === '!ticket panel set') {
+    const embed = new EmbedBuilder()
+      .setTitle('<a:emoji_23:1437165438315532431> SUPPORT TICKET SYSTEM')
+      .setDescription(
+        `<a:emoji_21:1437163698161717468> Need Help? Click below to create a support ticket.\n` +
+        `<a:emoji_21:1437163698161717468> Staff will assist you soon.\n` +
+        `<a:emoji_21:1437163698161717468> Describe your issue clearly.\n` +
+        `<a:emoji_21:1437163698161717468> Available 24/7`
+      )
+      .setColor('#89CFF0')
+      .setThumbnail('https://cdn.discordapp.com/emojis/1437165310775132160.gif')
+      .setImage('https://i.imgur.com/rCQ33gA.gif');
 
-// 6️⃣ Funcție embed pentru check/announces
-function createStatusEmbed(status, ping) {
-  const statusEmoji = status === "UP" ? "<a:corrupt_verify:1437152885480886312>" : "❌";
-  const uptimeText = status === "UP" && lastUpTime ? formatDuration(Date.now() - lastUpTime) : "❌ No uptime data";
+    const button = new ButtonBuilder()
+      .setCustomId('create_ticket')
+      .setLabel('Create Ticket')
+      .setEmoji('1437155312527347915')
+      .setStyle(ButtonStyle.Secondary);
 
-  return new EmbedBuilder()
-    .setColor(0x1ABC9C)
-    .setTitle(`— <a:emoji_22:1437165310775132160> SITE STATUS —`)
-    .setThumbnail("<a:corrupt_crown:1437152941088702607>")
-    .setDescription(
-`<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**
-<a:emoji_21:1437163698161717468> Status: ${status === "UP" ? "ONLINE" : "OFFLINE"} ${statusEmoji}
-<a:emoji_21:1437163698161717468> Uptime: ${uptimeText}
-<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
-    )
-    .setImage("https://i.imgur.com/dg8a7VB.gif") // Banner sus
-    .setFooter({ text: "Site Uptime Monitor" });
-}
+    const row = new ActionRowBuilder().addComponents(button);
+    await message.channel.send({ embeds: [embed], components: [row] });
+  }
+});
 
-// 7️⃣ Interval pentru anunțuri automate
-setInterval(async () => {
-  try {
-    const start = Date.now();
-    let res, ping;
+// 7️⃣ Interaction listener
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId === 'create_ticket') {
+    await interaction.deferReply({ ephemeral: true });
     try {
-      const response = await fetch(MAIN_SITE_URL);
-      res = { ok: response.ok };
-      ping = Date.now() - start;
-    } catch {
-      res = { ok: false };
-      ping = null;
+      const channelName = `ticket-${String(ticketCount).padStart(3, '0')}`;
+      ticketCount++;
+
+      const ticketChannel = await interaction.guild.channels.create({
+        name: channelName,
+        type: ChannelType.GuildText,
+        permissionOverwrites: [
+          { id: interaction.guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+          { id: interaction.user.id, allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+          ] },
+          { id: ADMIN_ROLE_ID, allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+          ] }
+        ]
+      });
+
+      const ticketEmbed = new EmbedBuilder()
+        .setTitle('<a:emoji_23:1437165438315532431> TICKET CREATED')
+        .setDescription(
+          `<a:emoji_21:1437163698161717468> <@${interaction.user.id}> created this ticket!\n` +
+          `<a:emoji_21:1437163698161717468> Describe your issue.\n` +
+          `<a:emoji_21:1437163698161717468> Staff will respond shortly.`
+        )
+        .setColor('#89CFF0')
+        .setThumbnail('https://cdn.discordapp.com/emojis/1437165310775132160.gif')
+        .setImage('https://i.imgur.com/rCQ33gA.gif')
+        .setTimestamp();
+
+      const closeButton = new ButtonBuilder()
+        .setCustomId('close_ticket')
+        .setLabel('Close Ticket')
+        .setStyle(ButtonStyle.Danger);
+
+      const row2 = new ActionRowBuilder().addComponents(closeButton);
+      await ticketChannel.send({ embeds: [ticketEmbed], components: [row2] });
+
+      await interaction.editReply({ content: `✅ Ticket created: ${ticketChannel}`, ephemeral: true });
+
+    } catch (err) {
+      console.error(err);
+      await interaction.editReply({ content: '❌ Error creating ticket.', ephemeral: true });
     }
+  }
 
-    const currentStatus = res.ok ? "UP" : "DOWN";
-    if (res.ok && !lastUpTime) lastUpTime = Date.now();
-    if (!res.ok) lastUpTime = null;
+  if (interaction.customId === 'close_ticket') {
+    await interaction.reply({ content: '🔒 Closing ticket...', ephemeral: true });
+    setTimeout(async () => { await interaction.channel.delete().catch(() => {}); }, 2000);
+  }
+});
 
-    if (currentStatus !== lastStatus) {
-      const channel = client.channels.cache.get(STATUS_CHANNEL_ID);
-      if (channel) {
-        const embed = createStatusEmbed(currentStatus, ping);
-        await channel.send({ embeds: [embed] });
-      }
-      lastStatus = currentStatus;
-    }
-  } catch (err) { console.error(err); }
-}, 30000);
-
-// 8️⃣ Funcție embed pentru stats/daily
-async function sendStatsEmbed(titleText, statsData, footerText, targetUser) {
-  const embed = new EmbedBuilder()
-    .setColor(0x1ABC9C)
-    .setTitle(`— <a:emoji_22:1437165310775132160> ${titleText} —`)
-    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
-    .setDescription(
-`<a:emoji_21:1437163698161717468> **User:** ${targetUser.username}
-
-<a:emoji_21:1437163698161717468> **TOTAL STATS:** 
-\`\`\`
-Hits:     ${formatNumber(statsData.Totals?.Accounts)}
-Visits:   ${formatNumber(statsData.Totals?.Visits)}
-Clicks:   ${formatNumber(statsData.Totals?.Clicks)}
-\`\`\`
-
-<a:emoji_21:1437163698161717468> **BIGGEST HIT:** 
-\`\`\`
-Summary:  ${formatNumber(statsData.Highest?.Summary)}
-RAP:      ${formatNumber(statsData.Highest?.Rap)}
-Robux:    ${formatNumber(statsData.Highest?.Balance)}
-\`\`\`
-
-<a:emoji_21:1437163698161717468> **TOTAL HIT STATS:** 
-\`\`\`
-Summary:  ${formatNumber(statsData.TotalSummary)}
-RAP:      ${formatNumber(statsData.TotalRap)}
-Robux:    ${formatNumber(statsData.TotalRobux)}
-\`\`\``
-    )
-    .setImage("https://i.imgur.com/rCQ33gA.gif")
-    .setFooter({ text: footerText });
-  return embed;
-}
-
-// 9️⃣ Event listener pentru mesaje
+// 8️⃣ Comanda !stats / !stats @user
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   const targetUser = message.mentions.users.first() || message.author;
@@ -132,52 +146,79 @@ client.on('messageCreate', async (message) => {
     try {
       const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
       const data = await res.json();
-      if (!data.success || !data.Normal) { return message.reply("❌ No stats found."); }
+      if (!data.success || !data.Normal) return message.reply('❌ No stats found.');
 
       const normal = data.Normal;
+      const profile = data.Profile || {};
+      const hits = normal.Totals?.Accounts || 0;
+      const visits = normal.Totals?.Visits || 0;
+      const clicks = normal.Totals?.Clicks || 0;
+      const biggestSummary = normal.Highest?.Summary || 0;
+      const biggestRap = normal.Highest?.Rap || 0;
+      const biggestRobux = normal.Highest?.Balance || 0;
+      const totalSummary = normal.Totals?.Summary || 0;
+      const totalRap = normal.Totals?.Rap || 0;
+      const totalRobux = normal.Totals?.Balance || 0;
+      const userName = profile.userName || targetUser.username;
 
-      // Calculează manual TOTAL HIT STATS
-      let totalSummary = 0, totalRap = 0, totalRobux = 0;
-      if (normal.Hits && Array.isArray(normal.Hits)) {
-        normal.Hits.forEach(hit => {
-          totalSummary += hit.Summary || 0;
-          totalRap += hit.Rap || 0;
-          totalRobux += hit.Balance || 0;
-        });
-      } else {
-        totalSummary = normal.Totals?.Summary || 0;
-        totalRap = normal.Totals?.Rap || 0;
-        totalRobux = normal.Totals?.Balance || 0;
-      }
+      const embed = new EmbedBuilder()
+        .setColor('#89CFF0')
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(
+          `<a:emoji_22:1437165310775132160> NORMAL INFO\n` +
+          `<a:emoji_21:1437163698161717468> User: **${userName}**\n\n` +
+          `<a:emoji_21:1437163698161717468> TOTAL STATS:\nHits: ${formatNumber(hits)}\nVisits: ${formatNumber(visits)}\nClicks: ${formatNumber(clicks)}\n\n` +
+          `<a:emoji_21:1437163698161717468> BIGGEST HIT:\nSummary: ${formatNumber(biggestSummary)}\nRAP: ${formatNumber(biggestRap)}\nRobux: ${formatNumber(biggestRobux)}\n\n` +
+          `<a:emoji_21:1437163698161717468> TOTAL HIT STATS:\nSummary: ${formatNumber(totalSummary)}\nRAP: ${formatNumber(totalRap)}\nRobux: ${formatNumber(totalRobux)}`
+        )
+        .setImage('https://i.imgur.com/rCQ33gA.gif')
+        .setFooter({ text: 'Stats Bot' });
 
-      normal.TotalSummary = totalSummary;
-      normal.TotalRap = totalRap;
-      normal.TotalRobux = totalRobux;
-
-      const embed = await sendStatsEmbed("NORMAL INFO", normal, "Stats Bot", targetUser);
       await message.channel.send({ embeds: [embed] });
-
-    } catch (err) { console.error(err); message.reply("❌ Error fetching stats."); }
+    } catch (err) {
+      console.error(err);
+      message.reply('❌ Error fetching stats.');
+    }
   }
 
   // ===== !daily =====
   if (message.content.startsWith('!daily')) {
     try {
-      const DAILY_API = `https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`;
-      const res = await fetch(DAILY_API);
+      const res = await fetch('https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds');
       const data = await res.json();
+      if (!data.success) return message.reply('❌ No daily stats found.');
 
-      if (!data || !data.Normal) { message.reply("❌ No daily stats found."); return; }
+      const daily = data.Daily || {};
+      const profile = data.Profile || {};
+      const hits = daily.Totals?.Accounts || 0;
+      const visits = daily.Totals?.Visits || 0;
+      const clicks = daily.Totals?.Clicks || 0;
+      const biggestSummary = daily.Highest?.Summary || 0;
+      const biggestRap = daily.Highest?.Rap || 0;
+      const biggestRobux = daily.Highest?.Balance || 0;
+      const totalSummary = daily.Totals?.Summary || 0;
+      const totalRap = daily.Totals?.Rap || 0;
+      const totalRobux = daily.Totals?.Balance || 0;
+      const userName = profile.userName || targetUser.username;
 
-      const normal = data.Normal;
-      normal.TotalSummary = normal.Totals?.Summary || 0;
-      normal.TotalRap = normal.Totals?.Rap || 0;
-      normal.TotalRobux = normal.Totals?.Balance || 0;
+      const embed = new EmbedBuilder()
+        .setColor('#89CFF0')
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(
+          `<a:emoji_22:1437165310775132160> DAILY INFO\n` +
+          `<a:emoji_21:1437163698161717468> User: **${userName}**\n\n` +
+          `<a:emoji_21:1437163698161717468> DAILY STATS:\nHits: ${formatNumber(hits)}\nVisits: ${formatNumber(visits)}\nClicks: ${formatNumber(clicks)}\n\n` +
+          `<a:emoji_21:1437163698161717468> BIGGEST HIT:\nSummary: ${formatNumber(biggestSummary)}\nRAP: ${formatNumber(biggestRap)}\nRobux: ${formatNumber(biggestRobux)}\n\n` +
+          `<a:emoji_21:1437163698161717468> TOTAL HIT STATS:\nSummary: ${formatNumber(totalSummary)}\nRAP: ${formatNumber(totalRap)}\nRobux: ${formatNumber(totalRobux)}`
+        )
+        .setImage('https://i.imgur.com/rCQ33gA.gif')
+        .setFooter({ text: 'Stats Bot Daily' });
 
-      const embed = await sendStatsEmbed("DAILY STATS", normal, "Stats Bot Daily", targetUser);
       await message.channel.send({ embeds: [embed] });
-
-    } catch (err) { console.error(err); message.reply("❌ Error fetching daily stats."); }
+    } catch (err) {
+      console.error(err);
+      message.reply('❌ Error fetching daily stats.');
+    }
   }
 
   // ===== !check =====
@@ -185,21 +226,51 @@ client.on('messageCreate', async (message) => {
     try {
       const start = Date.now();
       let res, ping;
-      try { const response = await fetch(MAIN_SITE_URL); res = { ok: response.ok }; ping = Date.now() - start; } 
-      catch { res = { ok: false }; ping = null; }
 
+      try {
+        const response = await fetch('https://www.logged.tg/auth/corrupteds');
+        res = { ok: response.ok };
+        ping = Date.now() - start;
+      } catch {
+        res = { ok: false };
+        ping = null;
+      }
+
+      let statusText = res.ok ? "<a:emoji_22:1437165310775132160> ONLINE" : "<a:emoji_22:1437165310775132160> OFFLINE";
       if (res.ok && !lastUpTime) lastUpTime = Date.now();
       if (!res.ok) lastUpTime = null;
+      const uptimeText = res.ok ? `UP for **${formatDuration(Date.now() - lastUpTime)}**` : "❌ No uptime data";
 
-      const embed = createStatusEmbed(res.ok ? "UP" : "DOWN", ping);
+      const embed = new EmbedBuilder()
+        .setColor('#89CFF0')
+        .setThumbnail('https://cdn.discordapp.com/emojis/1437165310775132160.gif')
+        .setDescription(
+          `<a:emoji_22:1437165310775132160> SITE STATUS\n` +
+          `<a:emoji_21:1437163698161717468> **STATUS:** ${statusText}\n` +
+          `<a:emoji_21:1437163698161717468> **UPTIME:** ${uptimeText}\n` +
+          `\`\`\`Response Time: ${ping ? ping + "ms" : "N/A"}\`\`\``
+        )
+        .setImage('https://i.imgur.com/rCQ33gA.gif')
+        .setFooter({ text: 'Site Uptime Monitor' });
+
       await message.channel.send({ embeds: [embed] });
-    } catch { message.reply("❌ Error fetching site status."); }
+    } catch (err) {
+      lastUpTime = null;
+      const embed = new EmbedBuilder()
+        .setColor('#89CFF0')
+        .setThumbnail('https://cdn.discordapp.com/emojis/1437165310775132160.gif')
+        .setDescription(
+          `<a:emoji_22:1437165310775132160> SITE STATUS\n` +
+          `<a:emoji_21:1437163698161717468> **STATUS:** OFFLINE\n` +
+          `<a:emoji_21:1437163698161717468> **UPTIME:** No uptime data`
+        )
+        .setImage('https://i.imgur.com/rCQ33gA.gif')
+        .setFooter({ text: 'Site Uptime Monitor' });
+
+      await message.channel.send({ embeds: [embed] });
+    }
   }
 });
 
-// 10️⃣ Error handler
-client.on('error', console.error);
-
-// 11️⃣ Login bot
-if (!TOKEN) { console.error('❌ DISCORD_BOT_TOKEN is not set!'); process.exit(1); }
+// 9️⃣ Login
 client.login(TOKEN);
