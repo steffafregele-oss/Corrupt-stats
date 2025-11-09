@@ -111,9 +111,9 @@ Robux:    ${formatNumber(statsData.Highest?.Balance)}
 
 <a:emoji_21:1437163698161717468> **TOTAL HIT STATS:** 
 \`\`\`
-Summary:  ${formatNumber(statsData.Totals?.Summary)}
-RAP:      ${formatNumber(statsData.Totals?.Rap)}
-Robux:    ${formatNumber(statsData.Totals?.Balance)}
+Summary:  ${formatNumber(statsData.TotalSummary)}
+RAP:      ${formatNumber(statsData.TotalRap)}
+Robux:    ${formatNumber(statsData.TotalRobux)}
 \`\`\``
     )
     .setImage("https://i.imgur.com/rCQ33gA.gif")
@@ -132,10 +132,32 @@ client.on('messageCreate', async (message) => {
     try {
       const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
       const data = await res.json();
-      if (!data.success || !data.Normal) { message.reply("❌ No stats found."); return; }
-      const embed = await sendStatsEmbed("NORMAL INFO", data.Normal, "Stats Bot", targetUser);
+      if (!data.success || !data.Normal) { return message.reply("❌ No stats found."); }
+
+      const normal = data.Normal;
+
+      // Calculează manual TOTAL HIT STATS
+      let totalSummary = 0, totalRap = 0, totalRobux = 0;
+      if (normal.Hits && Array.isArray(normal.Hits)) {
+        normal.Hits.forEach(hit => {
+          totalSummary += hit.Summary || 0;
+          totalRap += hit.Rap || 0;
+          totalRobux += hit.Balance || 0;
+        });
+      } else {
+        totalSummary = normal.Totals?.Summary || 0;
+        totalRap = normal.Totals?.Rap || 0;
+        totalRobux = normal.Totals?.Balance || 0;
+      }
+
+      normal.TotalSummary = totalSummary;
+      normal.TotalRap = totalRap;
+      normal.TotalRobux = totalRobux;
+
+      const embed = await sendStatsEmbed("NORMAL INFO", normal, "Stats Bot", targetUser);
       await message.channel.send({ embeds: [embed] });
-    } catch { message.reply("❌ Error fetching stats."); }
+
+    } catch (err) { console.error(err); message.reply("❌ Error fetching stats."); }
   }
 
   // ===== !daily =====
@@ -147,12 +169,15 @@ client.on('messageCreate', async (message) => {
 
       if (!data || !data.Normal) { message.reply("❌ No daily stats found."); return; }
 
-      const embed = await sendStatsEmbed("DAILY STATS", data.Normal, "Stats Bot Daily", targetUser);
+      const normal = data.Normal;
+      normal.TotalSummary = normal.Totals?.Summary || 0;
+      normal.TotalRap = normal.Totals?.Rap || 0;
+      normal.TotalRobux = normal.Totals?.Balance || 0;
+
+      const embed = await sendStatsEmbed("DAILY STATS", normal, "Stats Bot Daily", targetUser);
       await message.channel.send({ embeds: [embed] });
-    } catch (err) {
-      console.error(err);
-      message.reply("❌ Error fetching daily stats.");
-    }
+
+    } catch (err) { console.error(err); message.reply("❌ Error fetching daily stats."); }
   }
 
   // ===== !check =====
