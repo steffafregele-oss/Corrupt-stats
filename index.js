@@ -78,18 +78,13 @@ setInterval(async () => {
   } catch (err) { console.error(err); }
 }, 30000);
 
-// 6️⃣ Event listener pentru mesaje
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  const targetUser = message.mentions.users.first() || message.author;
-  const targetId = targetUser.id;
-
-  async function sendStatsEmbed(titleText, statsData, footerText) {
-    const embed = new EmbedBuilder()
-      .setColor(0x1ABC9C)
-      .setTitle(`— <a:emoji_22:1437165310775132160> ${titleText} —`)
-      .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 })) // poza utilizatorului
-      .setDescription(
+// 6️⃣ Funcție generica pentru embed-uri stats
+async function sendStatsEmbed(titleText, statsData, footerText, targetUser) {
+  const embed = new EmbedBuilder()
+    .setColor(0x1ABC9C)
+    .setTitle(`— <a:emoji_22:1437165310775132160> ${titleText} —`)
+    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 })) // poza utilizatorului
+    .setDescription(
 `<a:emoji_21:1437163698161717468> **User:** ${targetUser.username}
 
 <a:emoji_21:1437163698161717468> **TOTAL STATS:** 
@@ -112,12 +107,18 @@ Summary:  ${formatNumber(statsData.Totals?.Summary)}
 RAP:      ${formatNumber(statsData.Totals?.Rap)}
 Robux:    ${formatNumber(statsData.Totals?.Balance)}
 \`\`\``
-      )
-      .setImage("https://i.imgur.com/8ybiT0H.gif") // banner jos
-      .setFooter({ text: footerText });
+    )
+    .setImage("https://i.imgur.com/rCQ33gA.gif") // banner jos nou pentru stats/daily
+    .setFooter({ text: footerText });
 
-    await message.channel.send({ embeds: [embed] });
-  }
+  return embed;
+}
+
+// 6.1️⃣ Event listener pentru mesaje
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+  const targetUser = message.mentions.users.first() || message.author;
+  const targetId = targetUser.id;
 
   // ===== !stats =====
   if (message.content.startsWith('!stats')) {
@@ -125,7 +126,8 @@ Robux:    ${formatNumber(statsData.Totals?.Balance)}
       const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
       const data = await res.json();
       if (!data.success || !data.Normal) { message.reply("❌ No stats found."); return; }
-      await sendStatsEmbed("NORMAL INFO", data.Normal, "Stats Bot");
+      const embed = await sendStatsEmbed("NORMAL INFO", data.Normal, "Stats Bot", targetUser);
+      await message.channel.send({ embeds: [embed] });
     } catch { message.reply("❌ Error fetching stats."); }
   }
 
@@ -135,7 +137,8 @@ Robux:    ${formatNumber(statsData.Totals?.Balance)}
       const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
       const data = await res.json();
       const daily = data.Daily || data.Normal;
-      await sendStatsEmbed("DAILY STATS", daily, "Stats Bot Daily");
+      const embed = await sendStatsEmbed("DAILY STATS", daily, "Stats Bot Daily", targetUser);
+      await message.channel.send({ embeds: [embed] });
     } catch { message.reply("❌ Error fetching daily stats."); }
   }
 
@@ -160,11 +163,10 @@ Robux:    ${formatNumber(statsData.Totals?.Balance)}
 <a:emoji_21:1437163698161717468> Uptime: ${uptimeText}
 <a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
         )
-        .setImage("https://i.imgur.com/8ybiT0H.gif") // banner jos
+        .setImage("https://i.imgur.com/8ybiT0H.gif") // banner jos pentru check/announces
         .setFooter({ text: "Site Uptime Monitor" });
 
       await message.channel.send({ embeds: [embed] });
-
     } catch (err) { console.error(err); }
   }
 });
