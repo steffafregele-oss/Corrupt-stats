@@ -1,14 +1,17 @@
 {
-  "name": "corrupteds-bot",
+  "name": "corrupt-bot",
   "version": "1.0.0",
+  "description": "Discord bot cu comenzi !stats și !daily",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.12.0",
-    "node-fetch": "^3.3.2",
-    "dotenv": "^16.1.4"
+    "discord.js": "^14.12.1",
+    "node-fetch": "^2.6.7",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
