@@ -1,7 +1,6 @@
 // 1️⃣ Importuri
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const fetch = require('node-fetch');
-require('dotenv').config(); // citire .env
 
 // 2️⃣ Creezi clientul Discord
 const client = new Client({
@@ -12,37 +11,12 @@ const client = new Client({
   ]
 });
 
-// 3️⃣ Variabile din .env
-const TOKEN = process.env.DISCORD_BOT_TOKEN;
-const STATUS_CHANNEL_ID = process.env.STATUS_CHANNEL_ID || "1436098432413597726";
+const TOKEN = "TOKENUL_TAU_DISCORD"; // pune aici token-ul botului tău
 
-// 4️⃣ Funcții utile
+// 3️⃣ Funcții utile
 function formatNumber(num) { return num?.toLocaleString() || "0"; }
 
-// Retry + timeout pentru API
-async function fetchUserStats(userId, retries = 3, timeoutMs = 100000) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-      const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${userId}`, {
-        headers: { "Accept": "application/json" },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-
-      if (!res.ok) continue;
-      return await res.json();
-    } catch (err) {
-      console.error(`Attempt ${i + 1} failed:`, err);
-    }
-  }
-  return null;
-}
-
-// 5️⃣ Funcție pentru trimis embed
+// 4️⃣ Funcție pentru embed
 async function sendEmbed(userId, channel, data) {
   if (!data || !data.Normal) return;
 
@@ -51,9 +25,9 @@ async function sendEmbed(userId, channel, data) {
   const userName = profile.userName || "Unknown";
 
   const embed = new EmbedBuilder()
-    .setColor(0xFFFF00)
+    .setColor(0x00BFFF)
     .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif")
-    .setDescription(`─── <a:emoji_23:1437165438315532431> **USER STATS** ───
+    .setDescription(`─── <a:emoji_23:1437165438315532431> **NORMAL INFO** ───
 
 <a:emoji_21:1437163698161717468> **User:** **${userName}**
 
@@ -73,12 +47,12 @@ RAP: ${formatNumber(normal.Totals?.Rap)}
 Robux: ${formatNumber(normal.Totals?.Balance)}
 `)
     .setImage("https://i.imgur.com/rCQ33gA.gif")
-    .setFooter({ text: "Stats Bot API Monitor" });
+    .setFooter({ text: "Stats Bot" });
 
   await channel.send({ embeds: [embed] });
 }
 
-// 6️⃣ Event listener pentru mesaje
+// 5️⃣ Event listener pentru mesaje
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
@@ -87,9 +61,17 @@ client.on('messageCreate', async (message) => {
 
   // ===== !stats =====
   if (message.content.startsWith('!stats')) {
-    const data = await fetchUserStats(targetId);
-    if (!data) return message.reply("❌ Error fetching stats. API slow or unavailable.");
-    await sendEmbed(targetId, message.channel, data);
+    try {
+      const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
+      const data = await res.json();
+      if (!data.success || !data.Normal) return message.reply("❌ No stats found for this user.");
+
+      await sendEmbed(targetId, message.channel, data);
+
+    } catch (err) {
+      console.error(err);
+      message.reply("❌ Error fetching stats.");
+    }
   }
 
   // ===== !daily =====
@@ -97,14 +79,14 @@ client.on('messageCreate', async (message) => {
     try {
       const res = await fetch(`https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`);
       const data = await res.json();
-      if (!data || !data.Daily) return message.reply("❌ No daily stats available.");
+      if (!data.success || !data.Daily) return message.reply("❌ No daily stats available.");
 
       const daily = data.Daily || data.Normal;
       const profile = data.Profile || {};
       const userName = profile.userName || targetUser.username;
 
       const embed = new EmbedBuilder()
-        .setColor(0xFFFF00)
+        .setColor(0x00BFFF)
         .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
         .setDescription(`─── <a:emoji_23:1437165438315532431> **DAILY STATS** ───
 
@@ -129,6 +111,7 @@ Robux: ${formatNumber(daily.Totals?.Balance)}
         .setFooter({ text: "Stats Bot Daily" });
 
       await message.channel.send({ embeds: [embed] });
+
     } catch (err) {
       console.error(err);
       message.reply("❌ Error fetching daily stats.");
@@ -136,9 +119,9 @@ Robux: ${formatNumber(daily.Totals?.Balance)}
   }
 });
 
-// 7️⃣ Error handler
+// 6️⃣ Error handler
 client.on('error', (error) => console.error('Discord client error:', error));
 
-// 8️⃣ Login bot
+// 7️⃣ Login bot
 if (!TOKEN) { console.error('❌ DISCORD_BOT_TOKEN is not set!'); process.exit(1); }
 client.login(TOKEN);
