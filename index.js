@@ -1,7 +1,7 @@
 // 1️⃣ Importuri
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const fetch = require('node-fetch');
-require('dotenv').config();
+require('dotenv').config(); // citire .env
 
 // 2️⃣ Creezi clientul Discord
 const client = new Client({
@@ -12,10 +12,11 @@ const client = new Client({
   ]
 });
 
+// 3️⃣ Variabile din .env
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const STATUS_CHANNEL_ID = process.env.STATUS_CHANNEL_ID || "1436098432413597726";
 
-// 3️⃣ Funcții utile
+// 4️⃣ Funcții utile
 function formatNumber(num) { return num?.toLocaleString() || "0"; }
 
 // Retry + timeout pentru API
@@ -41,9 +42,6 @@ async function fetchUserStats(userId, retries = 3, timeoutMs = 100000) {
   return null;
 }
 
-// 4️⃣ Variabilă pentru ultimele date
-let lastUserData = {};
-
 // 5️⃣ Funcție pentru trimis embed
 async function sendEmbed(userId, channel, data) {
   if (!data || !data.Normal) return;
@@ -54,7 +52,7 @@ async function sendEmbed(userId, channel, data) {
 
   const embed = new EmbedBuilder()
     .setColor(0xFFFF00)
-    .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif") // emoji animat
+    .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif")
     .setDescription(`─── <a:emoji_23:1437165438315532431> **USER STATS** ───
 
 <a:emoji_21:1437163698161717468> **User:** **${userName}**
@@ -74,7 +72,7 @@ Summary: ${formatNumber(normal.Totals?.Summary)}
 RAP: ${formatNumber(normal.Totals?.Rap)}
 Robux: ${formatNumber(normal.Totals?.Balance)}
 `)
-    .setImage("https://i.imgur.com/rCQ33gA.gif") // banner jos
+    .setImage("https://i.imgur.com/rCQ33gA.gif")
     .setFooter({ text: "Stats Bot API Monitor" });
 
   await channel.send({ embeds: [embed] });
@@ -96,18 +94,19 @@ client.on('messageCreate', async (message) => {
 
   // ===== !daily =====
   if (message.content.startsWith('!daily')) {
-    const res = await fetch(`https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`);
-    const data = await res.json();
-    if (!data || !data.Daily) return message.reply("❌ No daily stats available.");
+    try {
+      const res = await fetch(`https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`);
+      const data = await res.json();
+      if (!data || !data.Daily) return message.reply("❌ No daily stats available.");
 
-    const daily = data.Daily || data.Normal;
-    const profile = data.Profile || {};
-    const userName = profile.userName || targetUser.username;
+      const daily = data.Daily || data.Normal;
+      const profile = data.Profile || {};
+      const userName = profile.userName || targetUser.username;
 
-    const embed = new EmbedBuilder()
-      .setColor(0xFFFF00)
-      .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
-      .setDescription(`─── <a:emoji_23:1437165438315532431> **DAILY STATS** ───
+      const embed = new EmbedBuilder()
+        .setColor(0xFFFF00)
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+        .setDescription(`─── <a:emoji_23:1437165438315532431> **DAILY STATS** ───
 
 <a:emoji_21:1437163698161717468> **User:** **${userName}**
 
@@ -126,10 +125,14 @@ Summary: ${formatNumber(daily.Totals?.Summary)}
 RAP: ${formatNumber(daily.Totals?.Rap)}
 Robux: ${formatNumber(daily.Totals?.Balance)}
 `)
-      .setImage("https://i.imgur.com/rCQ33gA.gif")
-      .setFooter({ text: "Stats Bot Daily" });
+        .setImage("https://i.imgur.com/rCQ33gA.gif")
+        .setFooter({ text: "Stats Bot Daily" });
 
-    await message.channel.send({ embeds: [embed] });
+      await message.channel.send({ embeds: [embed] });
+    } catch (err) {
+      console.error(err);
+      message.reply("❌ Error fetching daily stats.");
+    }
   }
 });
 
