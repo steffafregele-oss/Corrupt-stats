@@ -3,7 +3,7 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const fetch = require('node-fetch');
 const express = require('express');
 
-// 2️⃣ Server Express pentru keep-alive (Render)
+// 2️⃣ Server Express pentru keep-alive
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.get("/", (req, res) => res.send("Bot is alive ✅"));
@@ -41,15 +41,18 @@ const MAIN_SITE_NAME = "CORRUPTEDS";
 setInterval(async () => {
   try {
     const start = Date.now();
-    let res, ping;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-    try { 
-      const response = await fetch(MAIN_SITE_URL); 
-      res = { ok: response.ok }; 
-      ping = Date.now() - start; 
-    } catch { 
-      res = { ok: false }; 
-      ping = null; 
+    let res, ping;
+    try {
+      const response = await fetch(MAIN_SITE_URL, { signal: controller.signal, redirect: 'follow' });
+      clearTimeout(timeout);
+      res = { ok: response.status < 500 };
+      ping = Date.now() - start;
+    } catch {
+      res = { ok: false };
+      ping = null;
     }
 
     let currentStatus = res.ok ? "UP" : "DOWN";
@@ -60,15 +63,15 @@ setInterval(async () => {
       const channel = client.channels.cache.get(STATUS_CHANNEL_ID);
       if (channel) {
         const embed = new EmbedBuilder()
-          .setColor(0x00BFFF) // baby blue
-          .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif") // coroana animata
+          .setColor(0x00BFFF)
+          .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif")
           .setDescription(
             `<a:emoji_23:1437165438315532431> **SITE STATUS**\n\n` +
             `<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**\n` +
             `<a:emoji_21:1437163698161717468> STATUS: ${currentStatus}\n` +
             `<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
           )
-          .setImage("https://i.imgur.com/rCQ33gA.gif") // banner jos
+          .setImage("https://i.imgur.com/rCQ33gA.gif")
           .setFooter({ text: "Site Uptime Monitor" });
 
         await channel.send({ embeds: [embed] });
@@ -86,21 +89,54 @@ client.on('messageCreate', async (message) => {
   const targetUser = message.mentions.users.first() || message.author;
   const targetId = targetUser.id;
 
+  // 6.1️⃣ Funcție fetch cu retry automat
+  async function safeFetchWithRetry(url, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30s
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (StatsBot/1.0)",
+            "Accept": "application/json",
+            "Referrer": "https://www.logged.tg"
+          },
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error(`Attempt ${i+1}: Bad response`, res.status, text.slice(0, 200));
+          continue; // retry
+        }
+
+        const data = await res.json();
+        return data;
+
+      } catch (err) {
+        console.error(`Attempt ${i+1}: Fetch error`, err);
+      }
+    }
+    return null; // toate încercările au eșuat
+  }
+
   // ===== !stats =====
   if (message.content.startsWith('!stats')) {
-    try {
-      const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
-      const data = await res.json();
-      if (!data.success || !data.Normal) return message.reply("❌ No stats found for this user.");
+    const loading = await message.channel.send("⏳ Fetching stats... please wait");
+    const data = await safeFetchWithRetry(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
+    await loading.delete();
 
-      const normal = data.Normal;
-      const profile = data.Profile || {};
-      const userName = profile.userName || targetUser.username;
+    if (!data || !data.Normal) return message.reply("❌ Error fetching stats. API slow or unavailable.");
 
-      const embed = new EmbedBuilder()
-        .setColor(0x00BFFF)
-        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
-        .setDescription(`─── <a:emoji_23:1437165438315532431> **NORMAL INFO** ───
+    const normal = data.Normal;
+    const profile = data.Profile || {};
+    const userName = profile.userName || targetUser.username;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x00BFFF)
+      .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+      .setDescription(`─── <a:emoji_23:1437165438315532431> **NORMAL INFO** ───
 
 <a:emoji_21:1437163698161717468> **User:** **${userName}**
 
@@ -119,32 +155,28 @@ Summary: ${formatNumber(normal.Totals?.Summary)}
 RAP: ${formatNumber(normal.Totals?.Rap)}
 Robux: ${formatNumber(normal.Totals?.Balance)}
 `)
-        .setImage("https://i.imgur.com/rCQ33gA.gif")
-        .setFooter({ text: "Stats Bot" });
+      .setImage("https://i.imgur.com/rCQ33gA.gif")
+      .setFooter({ text: "Stats Bot" });
 
-      await message.channel.send({ embeds: [embed] });
-
-    } catch (err) {
-      console.error('Error fetching stats:', err);
-      message.reply("❌ Error fetching stats. Please try again later.");
-    }
+    await message.channel.send({ embeds: [embed] });
   }
 
   // ===== !daily =====
   if (message.content.startsWith('!daily')) {
-    try {
-      const res = await fetch(`https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`);
-      const data = await res.json();
-      if (!data.success) return message.reply("❌ No daily stats available.");
+    const loading = await message.channel.send("⏳ Fetching daily stats... please wait");
+    const data = await safeFetchWithRetry(`https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`);
+    await loading.delete();
 
-      const daily = data.Daily || data.Normal;
-      const profile = data.Profile || {};
-      const userName = profile.userName || targetUser.username;
+    if (!data || !data.Daily) return message.reply("❌ Error fetching daily stats. API slow or unavailable.");
 
-      const embed = new EmbedBuilder()
-        .setColor(0x00BFFF)
-        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
-        .setDescription(`─── <a:emoji_23:1437165438315532431> **DAILY STATS** ───
+    const daily = data.Daily || data.Normal;
+    const profile = data.Profile || {};
+    const userName = profile.userName || targetUser.username;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x00BFFF)
+      .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 128 }))
+      .setDescription(`─── <a:emoji_23:1437165438315532431> **DAILY STATS** ───
 
 <a:emoji_21:1437163698161717468> **User:** **${userName}**
 
@@ -163,45 +195,45 @@ Summary: ${formatNumber(daily.Totals?.Summary)}
 RAP: ${formatNumber(daily.Totals?.Rap)}
 Robux: ${formatNumber(daily.Totals?.Balance)}
 `)
-        .setImage("https://i.imgur.com/rCQ33gA.gif")
-        .setFooter({ text: "Stats Bot Daily" });
+      .setImage("https://i.imgur.com/rCQ33gA.gif")
+      .setFooter({ text: "Stats Bot Daily" });
 
-      await message.channel.send({ embeds: [embed] });
-
-    } catch (err) {
-      console.error('Error fetching daily stats:', err);
-      message.reply("❌ Error fetching daily stats. Please try again later.");
-    }
+    await message.channel.send({ embeds: [embed] });
   }
 
   // ===== !check =====
   if (message.content.startsWith('!check')) {
+    const start = Date.now();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    let res, ping;
     try {
-      const start = Date.now();
-      let res, ping;
-      try { const response = await fetch(MAIN_SITE_URL); res = { ok: response.ok }; ping = Date.now() - start; } 
-      catch { res = { ok: false }; ping = null; }
-
-      let statusText = res.ok ? "<a:emoji_22:1437165310775132160> ONLINE" : "<a:emoji_22:1437165310775132160> OFFLINE";
-      let uptimeText = res.ok && lastUpTime ? `UP for ${formatDuration(Date.now() - lastUpTime)}` : "❌ No uptime data";
-
-      const embed = new EmbedBuilder()
-        .setColor(0x00BFFF)
-        .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif")
-        .setDescription(`<a:emoji_23:1437165438315532431> **SITE STATUS**\n\n` +
-          `<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**\n` +
-          `<a:emoji_21:1437163698161717468> STATUS: ${statusText}\n` +
-          `<a:emoji_21:1437163698161717468> UPTIME: ${uptimeText}\n` +
-          `<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
-        )
-        .setImage("https://i.imgur.com/rCQ33gA.gif")
-        .setFooter({ text: "Site Uptime Monitor" });
-
-      await message.channel.send({ embeds: [embed] });
-
-    } catch (err) {
-      console.error(err);
+      const response = await fetch(MAIN_SITE_URL, { signal: controller.signal, redirect: 'follow' });
+      clearTimeout(timeout);
+      res = { ok: response.status < 500 };
+      ping = Date.now() - start;
+    } catch {
+      res = { ok: false };
+      ping = null;
     }
+
+    let statusText = res.ok ? "<a:emoji_22:1437165310775132160> ONLINE" : "<a:emoji_22:1437165310775132160> OFFLINE";
+    let uptimeText = res.ok && lastUpTime ? `UP for ${formatDuration(Date.now() - lastUpTime)}` : "❌ No uptime data";
+
+    const embed = new EmbedBuilder()
+      .setColor(0x00BFFF)
+      .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif")
+      .setDescription(`<a:emoji_23:1437165438315532431> **SITE STATUS**\n\n` +
+        `<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**\n` +
+        `<a:emoji_21:1437163698161717468> STATUS: ${statusText}\n` +
+        `<a:emoji_21:1437163698161717468> UPTIME: ${uptimeText}\n` +
+        `<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
+      )
+      .setImage("https://i.imgur.com/rCQ33gA.gif")
+      .setFooter({ text: "Site Uptime Monitor" });
+
+    await message.channel.send({ embeds: [embed] });
   }
 
 });
