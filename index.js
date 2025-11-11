@@ -30,6 +30,22 @@ function formatDuration(ms) {
   return `${hr}h ${min}m ${sec}s`;
 }
 
+// 4.1️⃣ Helper fetch cu timeout 10 sec
+async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  options.signal = controller.signal;
+
+  try {
+    const res = await fetch(url, options);
+    return res;
+  } catch (err) {
+    throw new Error("Request timed out or failed");
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 // 5️⃣ Config Uptime Monitor
 let lastUpTime = null;
 let lastStatus = null;
@@ -60,15 +76,15 @@ setInterval(async () => {
       const channel = client.channels.cache.get(STATUS_CHANNEL_ID);
       if (channel) {
         const embed = new EmbedBuilder()
-          .setColor(0x00BFFF) // baby blue
-          .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif") // coroana animata
+          .setColor(0x00BFFF)
+          .setThumbnail("https://cdn.discordapp.com/emojis/1437165310775132160.gif")
           .setDescription(
             `<a:emoji_23:1437165438315532431> **SITE STATUS**\n\n` +
             `<a:emoji_21:1437163698161717468> **${MAIN_SITE_NAME}**\n` +
             `<a:emoji_21:1437163698161717468> STATUS: ${currentStatus}\n` +
             `<a:emoji_21:1437163698161717468> Response Time: ${ping ? ping + "ms" : "N/A"}`
           )
-          .setImage("https://i.imgur.com/rCQ33gA.gif") // banner jos
+          .setImage("https://i.imgur.com/rCQ33gA.gif")
           .setFooter({ text: "Site Uptime Monitor" });
 
         await channel.send({ embeds: [embed] });
@@ -89,9 +105,10 @@ client.on('messageCreate', async (message) => {
   // ===== !stats =====
   if (message.content.startsWith('!stats')) {
     try {
-      const res = await fetch(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
+      const res = await fetchWithTimeout(`https://api.injuries.lu/v1/public/user?userId=${targetId}`);
       const data = await res.json();
-      if (!data.success || !data.Normal) return message.reply("❌ No stats found for this user.");
+
+      if (!data.success || !data.Normal) return message.reply("❌ No stats found.");
 
       const normal = data.Normal;
       const profile = data.Profile || {};
@@ -125,16 +142,17 @@ Robux: ${formatNumber(normal.Totals?.Balance)}
       await message.channel.send({ embeds: [embed] });
 
     } catch (err) {
-      console.error('Error fetching stats:', err);
-      message.reply("❌ Error fetching stats. Please try again later.");
+      console.error(err);
+      message.reply("❌ Error fetching stats: site/API did not respond in 10 seconds.");
     }
   }
 
   // ===== !daily =====
   if (message.content.startsWith('!daily')) {
     try {
-      const res = await fetch(`https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`);
+      const res = await fetchWithTimeout(`https://api.injuries.lu/v2/daily?type=0x2&cs=3&ref=corrupteds&userId=${targetId}`);
       const data = await res.json();
+
       if (!data.success) return message.reply("❌ No daily stats available.");
 
       const daily = data.Daily || data.Normal;
@@ -169,8 +187,8 @@ Robux: ${formatNumber(daily.Totals?.Balance)}
       await message.channel.send({ embeds: [embed] });
 
     } catch (err) {
-      console.error('Error fetching daily stats:', err);
-      message.reply("❌ Error fetching daily stats. Please try again later.");
+      console.error(err);
+      message.reply("❌ Error fetching daily stats: site/API did not respond in 10 seconds.");
     }
   }
 
@@ -179,8 +197,15 @@ Robux: ${formatNumber(daily.Totals?.Balance)}
     try {
       const start = Date.now();
       let res, ping;
-      try { const response = await fetch(MAIN_SITE_URL); res = { ok: response.ok }; ping = Date.now() - start; } 
-      catch { res = { ok: false }; ping = null; }
+
+      try { 
+        const response = await fetchWithTimeout(MAIN_SITE_URL, {}, 10000); 
+        res = { ok: response.ok }; 
+        ping = Date.now() - start; 
+      } catch { 
+        res = { ok: false }; 
+        ping = null; 
+      }
 
       let statusText = res.ok ? "<a:emoji_22:1437165310775132160> ONLINE" : "<a:emoji_22:1437165310775132160> OFFLINE";
       let uptimeText = res.ok && lastUpTime ? `UP for ${formatDuration(Date.now() - lastUpTime)}` : "❌ No uptime data";
@@ -201,6 +226,7 @@ Robux: ${formatNumber(daily.Totals?.Balance)}
 
     } catch (err) {
       console.error(err);
+      message.reply("❌ Error checking site: site did not respond in 10 seconds.");
     }
   }
 
